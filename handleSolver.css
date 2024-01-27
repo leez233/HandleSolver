@@ -1,0 +1,23 @@
+.btn-warning {
+    background-color: rgb(222, 117, 37);
+}
+
+.btn-warning:hover {
+    background-color: rgb(242, 137, 57);
+}
+
+.btn-success {
+    background-color: rgb(29, 156, 156);
+}
+
+.btn-success:hover {
+    background-color: rgb(39, 176, 176);
+}
+
+.monospace {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.big-spacing {
+    letter-spacing: 2px;
+}

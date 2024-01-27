@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>汉兜找词</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="./handleSolver.css" rel="stylesheet">
+</head>
+
+<body class="bg-body-tertiary">
+    <div class="container mt-5 mb-2">
+        <div class="row text-center">
+            <div class="col-10 col-md-6 mx-auto">
+                <a href="https://handle.antfu.me/" target="_blank" class="text-dark">汉兜是一款基于中文成语的Wordle变形，</a>而本工具可以帮助你完成汉兜谜题。
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-10 col-md-8 mx-auto">
+                在下方输入汉字后会自动填充拼音，<span class="fw-bold">如有多音字填充不准确可手动修改。（同时注意区分u/v）</span>
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-10 col-md-8 mx-auto">
+                选中拼音或汉字后再点击下方的调色板可着色，和汉兜谜题类似，
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-10 col-md-8 mx-auto">
+                <span style="color: rgb(29, 156, 156);">青色表示正确的部分，</span><span style="color: rgb(222, 117, 37);">橙色表示错位的部分，</span>而默认的黑色表示错误的部分。
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-10 col-md-8 mx-auto">
+                输入并着色完成后提交即可得到满足条件的成语，点击可选中为本次猜测词。
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-10 col-md-8 mx-auto">
+                下方可设置显示成语数的上限（最多为100）。完成一轮后重置开始新的一轮。
+            </div>
+        </div>
+        <div class="row text-center mb-5">
+            <div class="col-10 col-md-8 mx-auto">
+                相关链接：
+                <a href="https://github.com/fighting41love/funNLP/blob/master/data/%E6%88%90%E8%AF%AD%E8%AF%8D%E5%BA%93/ChengYu_Corpus%EF%BC%885W%EF%BC%89.txt" target="_blank" class="text-dark me-2">成语词库</a>
+                <a href="https://github.com/mozillazg/phrase-pinyin-data" target="_blank" class="text-dark">成语注音</a>
+            </div>
+        </div>
+
+        <div id="inputContainer">
+        </div>
+    </div>
+
+
+    <div class="d-flex justify-content-center mb-3">
+        <button class="btn btn-success border border-3 border-dark change-color-btn mx-2" style="width: 40px; height: 40px;"></button>
+        <button class="btn btn-warning border border-3 border-dark change-color-btn mx-2" style="width: 40px; height: 40px;"></button>
+        <button class="btn btn-dark border border-3 border-dark change-color-btn mx-2" style="width: 40px; height: 40px;"></button>
+    </div>
+
+    <div class="text-center mb-3">
+        <button class="btn btn-outline-dark mx-5" id="resetButton">重置</button>
+        <button class="btn btn-dark mx-5" id="submitButton">提交</button>
+    </div>
+
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-6 col-md-2 mx-auto">
+                <div class="input-group">
+                    <span class="input-group-text">显示上限</span>
+                    <input type="text" class="form-control text-center" value="16" id="resultUpperBoundInput">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const charCount = 4;
+        const correctColor = "rgb(29, 156, 156)";
+        const mismatchColor = "rgb(222, 117, 37)";
+        const wrongColor = "black";
+        var resultUpperBound = 16;
+        
+        let correctPinyinMap = new Map();
+        let mismatchPinyinMap = new Map();
+        let wrongPinyins = new Array();
+        let correctToneMap = new Map();
+        let mismatchToneMap = new Map();
+        let wrongTones = new Array();
+
+        let correctPinyinMapBackup = new Map();
+        let mismatchPinyinMapBackup = new Map();
+        let wrongPinyinsBackup = new Array();
+        let correctToneMapBackup = new Map();
+        let mismatchToneMapBackup = new Map();
+        let wrongTonesBackup = new Array();
+        
+        let validIdioms = new Array();
+
+        // 读入词典
+        var idioms;
+        fetch("./chinese_idioms.txt")
+        .then(response => {
+            if (!response.ok) {
+            throw new Error("读取失败");
+            }
+            return response.text();
+        })
+        .then(text => {
+            idioms = text.split(/\r\n|\n/);
+        })
+        .catch(error => {
+            console.error(error);
+        });
+
+        // 读入拼音
+        let pinyinMap = new Map();
+        fetch("./pinyin.txt")
+        .then(response => {
+            if (!response.ok) {
+            throw new Error("读取失败");
+            }
+            return response.text();
+        })
+        .then(text => {
+            var pinyins = text.split(/\r\n|\n/);
+            pinyins.forEach((pinyin) => {
+                pinyinMap.set(pinyin.split(" ")[0], pinyin.split(" ")[1]);
+            });
+        })
+        .catch(error => {
+            console.error(error);
+        });
+
+
+        // 设置结果显示上限
+        document.getElementById("resultUpperBoundInput").addEventListener("input", () => {
+            let newUpperBound = event.target.value.replace(/[^0-9]/g, '');
+            // console.log(resultUpperBound, newUpperBound);
+
+            // 如果新值为空或0，设置为1；如果大于100，设置为100
+            if (newUpperBound === "" || newUpperBound === "0") {
+                newUpperBound = 0;
+            } else if (parseInt(newUpperBound, 10) > 100) {
+                newUpperBound = 100;
+            } else {
+                newUpperBound = parseInt(newUpperBound, 10);
+            }
+
+            event.target.value = newUpperBound;
+
+            var result = document.getElementById("usedResult");
+            if (newUpperBound < resultUpperBound) {
+                var removedCount = Math.min(result.children.length, resultUpperBound) - newUpperBound;
+                for (var i = 0; i < removedCount; i++) {
+                    if (result.lastChild) {
+                        result.removeChild(result.lastChild);
+                    }
+                }
+            } else {
+                for (var i = 0; i < newUpperBound - resultUpperBound; i++) {
+                    if (validIdioms[resultUpperBound + i] == null) {
+                        break;
+                    }
+                    let idiomButton = document.createElement("div");
+                    result.appendChild(idiomButton);
+                    idiomButton.className = "btn btn-outline-dark mx-auto";
+                    let validIdiom = validIdioms[resultUpperBound + i];
+                    idiomButton.textContent = validIdiom;
+                    idiomButton.addEventListener("click", () => {
+                        var charInput = document.querySelectorAll(".char-input")[0];
+                        charInput.value = validIdiom;
+                        // 触发输入事件
+                        var event = new Event('input', {
+                            bubbles: true,
+                            cancelable: true,
+                        });
+                        charInput.dispatchEvent(event);
+                    });
+                }
+            }
+
+            resultUpperBound = newUpperBound;
+        });
+
+
+        // 重置
+        document.getElementById("resetButton").addEventListener("click", () => {
+            ClearMatchInfo();
+            var usedInputs = document.querySelectorAll(".used-inputs");
+            for (let usedInput of usedInputs) {
+                usedInput.parentElement.removeChild(usedInput);
+            }
+            var usedResultCollapses = document.querySelectorAll(".used-result-collapse");
+            for (let usedResultCollapse of usedResultCollapses) {
+                usedResultCollapse.parentElement.removeChild(usedResultCollapse);
+            }
+        });
+
+
+        // 寻找符合要求的成语
+        function GetTone(char) {
+            if (pinyinMap.has(char)) {
+                var pinyin = pinyinMap.get(char);
+                return pinyin[pinyin.length - 1];
+            } else {
+                return null;
+            }
+        }
+
+        function GetPinyin(char) {
+            if (pinyinMap.has(char)) {
+                var pinyin = pinyinMap.get(char);
+                return pinyin.substring(0, pinyin.length - 1);
+            } else {
+                return null;
+            }
+        }
+
+        let shengMus = ["b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", 
+            "j", "q", "x", "zh", "ch", "sh", "r", "z", "c", "s", "y", "w"]
+
+        function GetShengMu(char) {
+            var pinyin = GetPinyin(char);
+            if (pinyin == null) {
+                pinyin = char;
+            }
+            if (pinyin.length >= 2 && shengMus.includes(pinyin.substring(0, 2))) {
+                return pinyin.substring(0, 2);
+            }
+            else if (shengMus.includes(pinyin[0])) {
+                return pinyin[0];
+            }
+            return "";
+        }
+
+        function GetYunMu(char) {
+            var pinyin = GetPinyin(char);
+            if (pinyin == null) {
+                pinyin = char;
+            }
+            if (pinyin.length >= 2 && shengMus.includes(pinyin.substring(0, 2))) {
+                return pinyin.substring(2, pinyin.length);
+            }
+            else if (shengMus.includes(pinyin[0])) {
+                return pinyin.substring(1, pinyin.length);
+            }
+            return pinyin;
+        }
+
+        function CheckValidation(idiom, isTest=false) {
+            var tones = new Array();
+            var pinyins = new Array();
+            for (var i = 0; i < charCount; i++) {
+                var pinyin = idiom.split(" ")[i + 1];
+                var tone = pinyin[pinyin.length - 1];
+                tones.push(tone);
+                
+                var shengMu = GetShengMu(pinyin.substring(0, pinyin.length - 1));
+                var yunMu = GetYunMu(pinyin.substring(0, pinyin.length - 1));
+                pinyins.push(shengMu, yunMu);
+
+                // 更改错位的音调，保持正确的音调
+                if ((correctToneMap.has(i) && tone != correctToneMap.get(i)) || 
+                    (mismatchToneMap.has(i) && mismatchToneMap.get(i).includes(tone))) {
+                    if (isTest) {
+                        console.log(i + " mismatch / lost correct tone");
+                    }
+                    return false;
+                }
+                // 更改错位的声母/韵母
+                if (mismatchPinyinMap.has(i) && (mismatchPinyinMap.get(i).includes(shengMu) || mismatchPinyinMap.get(i).includes(yunMu))) {
+                    if (isTest) {
+                        console.log(i + " mismatch pinyin");
+                    }
+                    return false;
+                }
+                // 保持正确的声母/韵母
+                if (correctPinyinMap.has(i)) {
+                    var correctPinyins = correctPinyinMap.get(i);
+                    var correctPinyinCount = new Set(correctPinyins).size;
+                    if (correctPinyinCount > 1 && (!correctPinyins.includes(shengMu) || !correctPinyins.includes(yunMu))) {
+                        if (isTest) {
+                            console.log(i + " lost correct pinyin");
+                        }
+                        return false;
+                    } else if (!correctPinyins.includes(shengMu) && !correctPinyins.includes(yunMu)) {
+                        if (isTest) {
+                            console.log(i + " lost correct pinyin");
+                        }
+                        return false;
+                    }
+                }
+
+                // 不能包含不存在的声母/韵母
+                if (!correctPinyinMap.has(i) || !correctPinyinMap.get(i).includes(shengMu)) {
+                    for (let wrongPinyin of wrongPinyins) {
+                        if (shengMu == wrongPinyin) {
+                            if (isTest) {
+                                console.log(i + " wrong pinyin");
+                            }
+                            return false;
+                        }
+                    }
+                }
+                if (!correctPinyinMap.has(i) || !correctPinyinMap.get(i).includes(yunMu)) {
+                    for (let wrongPinyin of wrongPinyins) {
+                        if (yunMu == wrongPinyin) {
+                            if (isTest) {
+                                console.log(i + " wrong pinyin");
+                            }
+                            return false;
+                        }
+                    }
+                }
+                // 不能包含不存在的音调
+                if (!correctToneMap.has(i) || tone != correctToneMap.get(i)) {
+                    for (let wrongTone of wrongTones) {
+                        if (tone == wrongTone) {
+                            if (isTest) {
+                                console.log(i + " wrong tone");
+                            }
+                            return false;
+                        }
+                    }
+                }
+            }
+            
+            for (var i = 0; i < charCount; i++) {
+                // 必须包含所有错位音调
+                if (mismatchToneMap.has(i)) {
+                    var mismatchTones = mismatchToneMap.get(i);
+                    for (let mismatchTone of mismatchTones) {
+                        if (!tones.includes(mismatchTone)) {
+                            if (isTest) {
+                                console.log(i + " lost mismatch tone", tones, mismatchTone);
+                            }
+                            return false;
+                        }
+                    }
+                }
+                // 必须包含所有错位拼音
+                if (mismatchPinyinMap.has(i)) {
+                    var mismatchPinyins = mismatchPinyinMap.get(i);
+                    if (mismatchPinyins.length > 1 && (!pinyins.includes(mismatchPinyins[0]) || !pinyins.includes(mismatchPinyins[1]))) {
+                        if (isTest) {
+                            console.log(i + " lost mismatch pinyin");
+                        }
+                        return false;
+                    } else if (!pinyins.includes(mismatchPinyins[0])) {
+                        if (isTest) {
+                            console.log(i + " lost mismatch pinyin");
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+
+        function getColorOfText(pinyinInput, text, isShengMu) {
+            let spans = pinyinInput.parentElement.getElementsByTagName('span');
+            var color = wrongColor;
+            var lettersInShengMuYunMu = ["n", "g"];   // 可以同时出现在声母韵母中
+
+            for (let span of spans) {
+                if (span.textContent.includes(text)) {
+                    color = window.getComputedStyle(span).color;
+                    // console.log(span.textContent, text, color, isShengMu ? "Shengmu" : "YunMu/Tone");
+                    if (isShengMu && lettersInShengMuYunMu.includes(text)) {
+                        return color;
+                    }
+                }
+            }
+            return color;
+        }
+
+        function ClearMatchInfo() {
+            correctPinyinMap.clear();
+            mismatchPinyinMap.clear();
+            wrongPinyins = [];
+            correctToneMap.clear();
+            mismatchToneMap.clear();
+            wrongTones = [];
+        }
+
+        document.getElementById("submitButton").addEventListener("click", () => {
+            // 获取匹配信息
+            var pinyinInputs = document.querySelectorAll(".pinyin-input");
+            const inputDiv = document.getElementById("inputs");
+            let inputs = Array.from(inputDiv.children);
+            for (let pinyinInput of pinyinInputs) {
+                var pinyin = pinyinInput.textContent;
+                var tone = "";
+                if (/[1-4]/.test(pinyin[pinyin.length - 1])) {
+                    tone = pinyin[pinyin.length - 1];
+                    pinyin = pinyin.substring(0, pinyin.length - 1);
+                }
+                var shengMu = GetShengMu(pinyin);
+                var yunMu = GetYunMu(pinyin);
+
+                var pinyinInputIndex = inputs.indexOf(pinyinInput.parentElement);
+                var shengMuColor = wrongColor;
+                if (shengMu.length > 0) {
+                    shengMuColor = getColorOfText(pinyinInput, shengMu[0], true);
+
+                    if (shengMuColor == correctColor) {
+                        if (correctPinyinMap.has(pinyinInputIndex)) {
+                            correctPinyinMap.get(pinyinInputIndex).push(shengMu);
+                        } else {
+                            correctPinyinMap.set(pinyinInputIndex, [shengMu]);
+                        }
+                    } else if (shengMuColor == mismatchColor) {
+                        if (mismatchPinyinMap.has(pinyinInputIndex)) {
+                            mismatchPinyinMap.get(pinyinInputIndex).push(shengMu);
+                        } else {
+                            mismatchPinyinMap.set(pinyinInputIndex, [shengMu]);
+                        }
+                    } else {
+                        wrongPinyins.push(shengMu);
+                    }
+                }
+
+                var yunMuColor = wrongColor;
+                if (yunMu.length > 0) {
+                    yunMuColor = getColorOfText(pinyinInput, yunMu[0], false);
+
+                    if (yunMuColor == correctColor) {
+                        if (correctPinyinMap.has(pinyinInputIndex)) {
+                            correctPinyinMap.get(pinyinInputIndex).push(yunMu);
+                        } else {
+                            correctPinyinMap.set(pinyinInputIndex, [yunMu]);
+                        }
+                    } else if (yunMuColor == mismatchColor) {
+                        if (mismatchPinyinMap.has(pinyinInputIndex)) {
+                            mismatchPinyinMap.get(pinyinInputIndex).push(yunMu);
+                        } else {
+                            mismatchPinyinMap.set(pinyinInputIndex, [yunMu]);
+                        }
+                    } else {
+                        wrongPinyins.push(yunMu);
+                    }
+                }
+
+                for (var i = 0; i < charCount; i++) {
+                    if (mismatchPinyinMap.has(i)) {
+                        var mismatchPinyins = mismatchPinyinMap.get(i);
+                        for (let mismatchPinyin of mismatchPinyins) {
+                            if (wrongPinyins.includes(mismatchPinyin)) {
+                                let updatedWrongPinyins = wrongPinyins.filter(item => item !== mismatchPinyin);
+                                wrongPinyins = Array.from(updatedWrongPinyins);
+                            }
+                        }
+                    }
+                }
+
+                var toneColor = wrongColor;
+                if (tone.length > 0) {
+                    toneColor = getColorOfText(pinyinInput, tone, false);
+                    if (toneColor == correctColor) {
+                        correctToneMap.set(pinyinInputIndex, tone);
+                    } else if (toneColor == mismatchColor) {
+                        if (mismatchToneMap.has(pinyinInputIndex)) {
+                            mismatchToneMap.get(pinyinInputIndex).push(tone);
+                        } else {
+                            mismatchToneMap.set(pinyinInputIndex, [tone]);
+                        }
+                    } else {
+                        wrongTones.push(tone);
+                    }
+                }
+
+                for (var i = 0; i < charCount; i++) {
+                    if (mismatchToneMap.has(i)) {
+                        var mismatchTones = mismatchToneMap.get(i);
+                        for (let mismatchTone of mismatchTones) {
+                            if (wrongTones.includes(mismatchTone)) {
+                                let updatedWrongTones = wrongTones.filter(item => item !== mismatchTone);
+                                wrongTones = Array.from(updatedWrongTones);
+                            }
+                        }
+                    }
+                }
+
+                // console.log(shengMuColor, yunMuColor, toneColor);
+            }
+            console.log(correctPinyinMap, mismatchPinyinMap, wrongPinyins, correctToneMap, mismatchToneMap, wrongTones);
+
+
+            validIdioms = [];
+            idioms.forEach((idiom) => {
+                if (CheckValidation(idiom)) {
+                    validIdioms.push(idiom.split(" ")[0]);
+                }
+            })
+
+            var validCount = 0;
+            var resultCollapseCardRow = document.getElementById("result");
+            for (let validIdiom of validIdioms) {
+                if (validCount < resultUpperBound) {
+                    let idiomButton = document.createElement("div");
+                    resultCollapseCardRow.appendChild(idiomButton);
+                    idiomButton.className = "btn btn-outline-dark mx-auto";
+                    idiomButton.textContent = validIdiom;
+                    idiomButton.addEventListener("click", () => {
+                        var charInput = document.querySelectorAll(".char-input")[0];
+                        charInput.value = validIdiom;
+                        // 触发输入事件
+                        var event = new Event('input', {
+                            bubbles: true,
+                            cancelable: true,
+                        });
+                        charInput.dispatchEvent(event);
+                    });
+                    validCount++;
+                }
+            }
+            if (validCount == 0) {
+                document.getElementById("promptText").textContent = "没有满足条件的成语，请检查输入是否有误？";
+            } else {
+                document.getElementById("promptText").textContent = "请从下方选择一个成语：";
+            }
+
+            var resultCollapse = document.getElementById("resultCollapse");
+            var bsCollapse = new bootstrap.Collapse(resultCollapse, {
+            toggle: false
+            });
+            bsCollapse.show();
+
+            // CheckValidation("感人肺腑 gan3 ren2 fei4 fu3", isTest=true);
+
+
+            if (validIdioms.length == 0) {
+                // 清空输入框
+                var pinyinInputs = document.querySelectorAll(".pinyin-input"); 
+                var charInputs = document.querySelectorAll(".char-input");
+                for (let pinyinInput of pinyinInputs) {
+                    pinyinInput.textContent = "";
+                }
+                for (let charInput of charInputs) {
+                    charInput.value = "";
+                }
+                
+                // 撤销匹配信息
+                correctPinyinMap = new Map(correctPinyinMapBackup.entries());
+                mismatchPinyinMap = new Map(mismatchPinyinMapBackup.entries());
+                wrongPinyins = Array.from(wrongPinyinsBackup);
+                correctToneMap = new Map(correctToneMapBackup.entries());
+                mismatchToneMap = new Map(mismatchToneMapBackup.entries());
+                wrongTones = Array.from(wrongTonesBackup);
+            } else {
+                // 生成新的输入框，并disable旧的输入框
+                var pinyinInputs = document.querySelectorAll(".pinyin-input");
+                for (let pinyinInput of pinyinInputs) {
+                    pinyinInput.contentEditable = false;
+                    pinyinInput.classList.remove("pinyin-input");
+                }
+                var charInputs = document.querySelectorAll(".char-input");
+                for (let charInput of charInputs) {
+                    charInput.disabled = true;
+                    charInput.classList.remove("char-input");
+                }
+                document.getElementById("inputs").classList.add("used-inputs");
+                document.getElementById("inputs").id = "";
+                document.getElementById("resultCollapse").classList.add("used-result-collapse");
+                document.getElementById("resultCollapse").id = "";
+                if (document.getElementById("usedResult")) {
+                    document.getElementById("usedResult").id = "";
+                }
+                document.getElementById("result").id = "usedResult";
+                document.getElementById("promptText").id = "";
+                CreateInput();
+
+                // 备份匹配信息
+                correctPinyinMapBackup = new Map(correctPinyinMap.entries());
+                mismatchPinyinMapBackup = new Map(mismatchPinyinMap.entries());
+                wrongPinyinsBackup = Array.from(wrongPinyins);
+                correctToneMapBackup = new Map(correctToneMap.entries());
+                mismatchToneMapBackup = new Map(mismatchToneMap.entries());
+                wrongTonesBackup = Array.from(wrongTones);
+            }
+        });
+        
+
+
+        // 着色
+        var changeColorButtons = document.querySelectorAll(".change-color-btn");
+        var activeInput;
+        changeColorButtons.forEach(changeColorButton => {
+            changeColorButton.addEventListener("click", function() {
+                var changedColor = wrongColor;
+                if (changeColorButton.classList.contains("btn-warning")) {
+                    changedColor = mismatchColor;
+                } else if (changeColorButton.classList.contains("btn-success")) {
+                    changedColor = correctColor;
+                }
+
+                // 选中汉字
+                if (activeInput != null && activeInput.classList.contains("char-input")) {
+                    var inputDiv = document.getElementById("inputs");
+                    let inputs = Array.from(inputDiv.children);
+                    var charInputIndex = inputs.indexOf(activeInput.parentElement);
+                    var pinyinInput = inputs[charInputIndex - charCount].children[0];
+                    pinyinInput.innerHTML = "<span style=\"color: " + changedColor + "; \">" + pinyinInput.textContent + "<span>";
+                    activeInput.style.color = changedColor;
+
+                    return;
+                }
+
+
+                // 选中拼音
+                var selection = window.getSelection();
+                if (selection.rangeCount === 0) return;
+
+                var range = selection.getRangeAt(0);
+                var fragment = range.cloneContents();
+                
+                var childNodes = Array.from(fragment.childNodes);
+                var selectedNode = range.startContainer;
+                childNodes.forEach(node => {
+                    // 改变样式
+                    // console.log("node text content: " + node.textContent);
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        var span = document.createElement('span');
+                        span.style.color = changedColor;
+                        span.textContent = node.textContent;
+
+                        fragment.replaceChild(span, node);
+                    } else if (node.nodeType == Node.ELEMENT_NODE){
+                        node.style.color = changedColor;
+                    }
+                });
+
+                range.deleteContents();
+                range.insertNode(fragment);
+                selection.removeAllRanges();
+            });
+        });
+
+
+        // 根据选中文字确定active input
+        document.addEventListener('selectionchange', function() {
+            var selection = window.getSelection();
+            var selectedText = selection.toString().trim();
+            if (selection.anchorNode == null) {
+                return;
+            }
+            var selectedElement = selection.anchorNode.parentNode;
+
+            if (selectedText && (selectedElement.classList.contains("pinyin-input") || selectedElement.classList.contains("char-input"))) {
+                activeInput = selectedElement;
+            }
+        });
+
+
+        function ForbidNonLetterNumChar(input) {
+            // 禁止输入字母数字以外的字符，并强制转换小写
+            let selection = window.getSelection();
+            let range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+            if (range && input.contains(range.startContainer)) {
+                // 获取光标位置
+                let start = range.startOffset;
+                let end = range.endOffset;
+                // 处理文本
+                let node = range.startContainer;
+                let newText = node.textContent.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+                // 替换文本
+                node.textContent = newText;
+                // 重新设置选区
+                range.setStart(node, Math.min(start, node.textContent.length));
+                range.setEnd(node, Math.min(end, node.textContent.length));
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+
+        // 创建输入框
+        function CreateInput() {
+            const inputContainer = document.getElementById("inputContainer");
+
+            var inputDiv = document.createElement("div");
+            inputContainer.appendChild(inputDiv);
+            inputDiv.id = "inputs";
+            inputDiv.className = "row row-cols-4 mx-auto";
+            inputDiv.style = "max-width: 530px;";
+
+            for (var i = 0; i < charCount; i++) {
+                var pinyinInputDiv = document.createElement("div");
+                pinyinInputDiv.className = "col mb-2";
+                inputDiv.appendChild(pinyinInputDiv);
+                let pinyinInput = document.createElement("span");
+                pinyinInput.contentEditable = true;
+                pinyinInput.className = "form-control focus-ring border border-2 border-dark text-center pinyin-input monospace fw-bold big-spacing";
+                pinyinInput.style = "--bs-focus-ring-color: rgba(var(--bs-dark-rgb), .25);";
+                pinyinInputDiv.appendChild(pinyinInput);
+
+                pinyinInput.addEventListener("click", () => {
+                    activeInput = pinyinInput;
+                });
+                pinyinInput.addEventListener("input", () => {
+                    ForbidNonLetterNumChar(pinyinInput);
+                });
+                pinyinInput.addEventListener("paste", () => {
+                    ForbidNonLetterNumChar(pinyinInput);
+                });
+            }
+
+            for (var i = 0; i < charCount; i++) {
+                var charInputDiv = document.createElement("div");
+                inputDiv.appendChild(charInputDiv);
+                charInputDiv.className = "col mb-2";
+                let charInput = document.createElement("input");
+                charInputDiv.appendChild(charInput);
+                charInput.className = "form-control focus-ring border border-2 border-dark text-center fs-1 char-input";
+                charInput.style = "--bs-focus-ring-color: rgba(var(--bs-dark-rgb), .25); height: " + charInput.offsetWidth + "px;";
+
+                charInput.addEventListener("select", () => {
+                    activeInput = charInput;
+                });
+                charInput.addEventListener("click", () => {
+                    activeInput = charInput;
+                });
+
+                // 输入汉字时自动填充拼音
+                charInput.addEventListener("input", () => {
+                    var input = event.target.value.trim();
+                    let inputs = Array.from(inputDiv.children);
+                    var charInputIndex = inputs.indexOf(charInput.parentElement);
+
+                    if (!/[a-zA-Z]/.test(input) && input.length > 0) {
+                        for (var i = 0; i < input.length; i++) {
+                            if (inputs.length > charInputIndex + i) {
+                                inputs[charInputIndex + i].children[0].value = input[i];
+                                inputs[charInputIndex + i].children[0].focus();
+                                activeInput = inputs[charInputIndex + i].children[0];
+                            }
+                            
+                            var pinyin = "";
+                            var charIndex = charInputIndex + i - charCount;
+                            var isIdiom = false;
+                            for (let idiom of idioms) {
+                                if (idiom.split(" ")[0] == input) {
+                                    isIdiom = true;
+                                    pinyin = idiom.split(" ")[1 + charIndex];
+                                    break;
+                                }
+                            }
+                            if (!isIdiom && pinyinMap.has(input[i]) && pinyinMap.get(input[i]) != undefined) {
+                                pinyin = pinyinMap.get(input[i]);
+                            }
+                            // 把已知正确的部分染成绿色
+                            var shengMu = GetShengMu(pinyin);
+                            var yunMu = GetYunMu(pinyin.substring(0, pinyin.length - 1));
+                            var tone = pinyin[pinyin.length - 1];
+                            var coloredPinyin = "";
+                            if (correctPinyinMap.has(charIndex)) {
+                                if (correctPinyinMap.get(charIndex).includes(shengMu)) {
+                                    coloredPinyin += "<span style=\"color: " + correctColor + "\">" + shengMu + "</span>";
+                                } else {
+                                    coloredPinyin += shengMu;
+                                }
+                                if (correctPinyinMap.get(charIndex).includes(yunMu)) {
+                                    coloredPinyin += "<span style=\"color: " + correctColor + "\">" + yunMu + "</span>";
+                                } else {
+                                    coloredPinyin += yunMu;
+                                }
+                            } else {
+                                coloredPinyin += (shengMu + yunMu);
+                            }
+                            if (correctToneMap.has(charIndex) && correctToneMap.get(charIndex) == tone) {
+                                coloredPinyin += "<span style=\"color: " + correctColor + "\">" + tone + "</span>";
+                            } else {
+                                coloredPinyin += tone;
+                            }
+
+                            inputs[charInputIndex + i - charCount].children[0].innerHTML = coloredPinyin;
+                        }
+                    }
+
+                    if (input.length == 0) {
+                        inputs[charInputIndex - charCount].children[0].innerHTML = "";
+                    }
+                });
+
+                // 跨格删字
+                charInput.addEventListener("keydown", () => {
+                    if (event.keyCode === 8 || event.which === 8) {
+                        charInput.style.color = wrongColor;
+                        if (event.target.value == "") {
+                            let inputs = Array.from(inputDiv.children);
+                            var charInputIndex = inputs.indexOf(charInput.parentElement);
+                            var lastInput = inputs[charInputIndex - 1].children[0];
+                            if (lastInput.classList.contains("char-input")) {
+                                lastInput.value = "";
+                                inputs[charInputIndex - 1 - charCount].children[0].innerHTML = "";
+                                lastInput.focus();
+                            }
+                        }
+                    }
+                });
+            }
+
+            var resultCollapseRow = document.createElement("div");
+            inputContainer.appendChild(resultCollapseRow);
+            resultCollapseRow.className = "row d-flex justify-content-center";
+            var resultCollapseCol = document.createElement("div");
+            resultCollapseRow.appendChild(resultCollapseCol);
+            resultCollapseCol.className = "col-10 col-md-6";
+            var resultCollapse = document.createElement("div");
+            resultCollapseCol.appendChild(resultCollapse);
+            resultCollapse.className = "collapse mb-3";
+            resultCollapse.id = "resultCollapse";
+            var resultCollapseCard = document.createElement("div");
+            resultCollapse.appendChild(resultCollapseCard);
+            resultCollapseCard.className = "card card-body text-center container";
+            var promptText = document.createElement("div");
+            resultCollapseCard.appendChild(promptText);
+            promptText.className = "text-center mb-1";
+            promptText.id = "promptText";
+            var resultCollapseCardRow = document.createElement("div");
+            resultCollapseCard.appendChild(resultCollapseCardRow);
+            resultCollapseCardRow.className = "row row-cols-4 gy-1";
+            resultCollapseCardRow.id = "result";
+        }
+
+        CreateInput();
+    </script>
+</body>
+</html>
