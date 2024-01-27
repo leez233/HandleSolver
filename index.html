@@ -374,10 +374,15 @@
                     color = window.getComputedStyle(span).color;
                     // console.log(span.textContent, text, color, isShengMu ? "Shengmu" : "YunMu/Tone");
                     if (isShengMu && lettersInShengMuYunMu.includes(text)) {
-                        return color;
+                        if (!pinyinInput.classList.contains("first-dyed")) {
+                            return color;
+                        } else if (color == correctColor || color == mismatchColor){
+                            return color;
+                        }
                     }
                 }
             }
+            // console.log(text, color, isShengMu ? "Shengmu" : "YunMu/Tone");
             return color;
         }
 
@@ -490,7 +495,7 @@
 
                 // console.log(shengMuColor, yunMuColor, toneColor);
             }
-            console.log(correctPinyinMap, mismatchPinyinMap, wrongPinyins, correctToneMap, mismatchToneMap, wrongTones);
+            // console.log(correctPinyinMap, mismatchPinyinMap, wrongPinyins, correctToneMap, mismatchToneMap, wrongTones);
 
 
             validIdioms = [];
@@ -533,7 +538,7 @@
             });
             bsCollapse.show();
 
-            // CheckValidation("感人肺腑 gan3 ren2 fei4 fu3", isTest=true);
+            // CheckValidation("八仙过海 ba1 xian1 guo4 hai3", isTest=true);
 
 
             if (validIdioms.length == 0) {
@@ -623,6 +628,8 @@
                 
                 var childNodes = Array.from(fragment.childNodes);
                 var selectedNode = range.startContainer;
+
+                var isFirstNonEmpty = true;
                 childNodes.forEach(node => {
                     // 改变样式
                     // console.log("node text content: " + node.textContent);
@@ -634,6 +641,13 @@
                         fragment.replaceChild(span, node);
                     } else if (node.nodeType == Node.ELEMENT_NODE){
                         node.style.color = changedColor;
+                    }
+                    
+                    if (activeInput.textContent[0] == node.textContent && isFirstNonEmpty) {
+                        activeInput.classList.add("first-dyed");
+                    }
+                    if (node.textContent != "") {
+                        isFirstNonEmpty = false;
                     }
                 });
 
