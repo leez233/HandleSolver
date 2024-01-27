@@ -376,8 +376,12 @@
                     if (isShengMu && lettersInShengMuYunMu.includes(text)) {
                         if (!pinyinInput.classList.contains("first-dyed")) {
                             return color;
-                        } else if (color == correctColor || color == mismatchColor){
-                            return color;
+                        } else{
+                            if (pinyinInput.classList.contains("first-correct")) {
+                                return correctColor;
+                            } else if (pinyinInput.classList.contains("first-mismatch")) {
+                                return mismatchColor;
+                            }
                         }
                     }
                 }
@@ -645,6 +649,11 @@
                     
                     if (activeInput.textContent[0] == node.textContent && isFirstNonEmpty) {
                         activeInput.classList.add("first-dyed");
+                        if (changedColor == correctColor) {
+                            activeInput.classList.add("first-correct");
+                        } else if (changedColor == mismatchColor) {
+                            activeInput.classList.add("first-mismatch");
+                        }
                     }
                     if (node.textContent != "") {
                         isFirstNonEmpty = false;
