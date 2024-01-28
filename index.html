@@ -14,41 +14,55 @@
 
 <body class="bg-body-tertiary">
     <div class="container mt-5 mb-2">
-        <div class="row text-center">
-            <div class="col-10 col-md-6 mx-auto">
-                <a href="https://handle.antfu.me/" target="_blank" class="text-dark">汉兜是一款基于中文成语的Wordle变形，</a>而本工具可以帮助你完成汉兜谜题。
+        <div>
+            <div class="row text-center">
+                <div class="col-10 col-md-6 mx-auto">
+                    <a href="https://handle.antfu.me/" target="_blank" class="text-dark">汉兜是一款基于中文成语的Wordle变形，</a>而本工具可以帮助你完成汉兜谜题。
+                </div>
             </div>
-        </div>
-        <div class="row text-center">
-            <div class="col-10 col-md-8 mx-auto">
-                在下方输入汉字后会自动填充拼音，<span class="fw-bold">如有多音字填充不准确可手动修改。（同时注意区分u/v）</span>
+            <div class="row text-center">
+                <div class="col-10 col-md-8 mx-auto">
+                    在下方输入汉字后会自动填充拼音，<span class="fw-bold">如有多音字填充不准确可手动修改。（同时注意区分u/v）</span>
+                </div>
             </div>
-        </div>
-        <div class="row text-center">
-            <div class="col-10 col-md-8 mx-auto">
-                选中拼音或汉字后再点击下方的调色板可着色，和汉兜谜题类似，
+            <div class="row text-center">
+                <div class="col-10 col-md-8 mx-auto">
+                    选中拼音或汉字后再点击下方的调色板可着色，和汉兜谜题类似，
+                </div>
             </div>
-        </div>
-        <div class="row text-center">
-            <div class="col-10 col-md-8 mx-auto">
-                <span style="color: rgb(29, 156, 156);">青色表示正确的部分，</span><span style="color: rgb(222, 117, 37);">橙色表示错位的部分，</span>而默认的黑色表示错误的部分。
+            <div class="row text-center">
+                <div class="col-10 col-md-8 mx-auto">
+                    <span style="color: rgb(29, 156, 156);">青色表示正确的部分，</span><span style="color: rgb(222, 117, 37);">橙色表示错位的部分，</span>而默认的黑色表示错误的部分。
+                </div>
             </div>
-        </div>
-        <div class="row text-center">
-            <div class="col-10 col-md-8 mx-auto">
-                输入并着色完成后提交即可得到满足条件的成语，点击可选中为本次猜测词。
+            <div class="row text-center">
+                <div class="col-10 col-md-8 mx-auto">
+                    输入并着色完成后提交即可得到满足条件的成语，点击可选中为本次猜测词。
+                </div>
             </div>
-        </div>
-        <div class="row text-center">
-            <div class="col-10 col-md-8 mx-auto">
-                下方可设置显示成语数的上限（最多为100）。完成一轮后重置开始新的一轮。
+            <div class="row text-center">
+                <div class="col-10 col-md-8 mx-auto">
+                    下方可设置显示成语数的上限（最多为100）。完成一轮后重置开始新的一轮。
+                </div>
             </div>
-        </div>
-        <div class="row text-center mb-5">
-            <div class="col-10 col-md-8 mx-auto">
-                相关链接：
-                <a href="https://github.com/fighting41love/funNLP/blob/master/data/%E6%88%90%E8%AF%AD%E8%AF%8D%E5%BA%93/ChengYu_Corpus%EF%BC%885W%EF%BC%89.txt" target="_blank" class="text-dark me-2">成语词库</a>
-                <a href="https://github.com/mozillazg/phrase-pinyin-data" target="_blank" class="text-dark">成语注音</a>
+            <div class="row text-center mb-2">
+                <div class="col-10 col-md-8 mx-auto">
+                    相关链接：
+                    <a href="https://github.com/fighting41love/funNLP/blob/master/data/%E6%88%90%E8%AF%AD%E8%AF%8D%E5%BA%93/ChengYu_Corpus%EF%BC%885W%EF%BC%89.txt" target="_blank" class="text-dark me-2">成语词库</a>
+                    <a href="https://github.com/mozillazg/phrase-pinyin-data" target="_blank" class="text-dark">成语注音</a>
+                </div>
+            </div>
+            <hr>
+            <div class="row text-center mb-2">
+                <div class="col-10 col-md-8 mx-auto">
+                    快捷填词
+                </div>
+            </div>
+            <div class="row text-center mb-5">
+                <div class="col-10 col-md-8 mx-auto">
+                    <button class="btn btn-outline-dark mx-2" id="defaultInputButton">汉兜找词</button>
+                    <button class="btn btn-outline-dark mx-2" id="randomIdiomButton">随机成语</button>
+                </div>
             </div>
         </div>
 
@@ -138,6 +152,17 @@
         });
 
 
+        // 快捷填入
+        document.getElementById("defaultInputButton").addEventListener("click", () => {
+            InputIdiom(document.getElementById("defaultInputButton").textContent);
+        });
+
+        document.getElementById("randomIdiomButton").addEventListener("click", () => {
+            var randomIndex = Math.floor(Math.random() * idioms.length);
+            InputIdiom(idioms[randomIndex].split(" ")[0]);
+        });
+
+
         // 设置结果显示上限
         document.getElementById("resultUpperBoundInput").addEventListener("input", () => {
             let newUpperBound = event.target.value.replace(/[^0-9]/g, '');
@@ -155,33 +180,35 @@
             event.target.value = newUpperBound;
 
             var result = document.getElementById("usedResult");
-            if (newUpperBound < resultUpperBound) {
-                var removedCount = Math.min(result.children.length, resultUpperBound) - newUpperBound;
-                for (var i = 0; i < removedCount; i++) {
-                    if (result.lastChild) {
-                        result.removeChild(result.lastChild);
+            if (result != null) {
+                if (newUpperBound < resultUpperBound) {
+                    var removedCount = Math.min(result.children.length, resultUpperBound) - newUpperBound;
+                    for (var i = 0; i < removedCount; i++) {
+                        if (result.lastChild) {
+                            result.removeChild(result.lastChild);
+                        }
                     }
-                }
-            } else {
-                for (var i = 0; i < newUpperBound - resultUpperBound; i++) {
-                    if (validIdioms[resultUpperBound + i] == null) {
-                        break;
-                    }
-                    let idiomButton = document.createElement("div");
-                    result.appendChild(idiomButton);
-                    idiomButton.className = "btn btn-outline-dark mx-auto";
-                    let validIdiom = validIdioms[resultUpperBound + i];
-                    idiomButton.textContent = validIdiom;
-                    idiomButton.addEventListener("click", () => {
-                        var charInput = document.querySelectorAll(".char-input")[0];
-                        charInput.value = validIdiom;
-                        // 触发输入事件
-                        var event = new Event('input', {
-                            bubbles: true,
-                            cancelable: true,
+                } else {
+                    for (var i = 0; i < newUpperBound - resultUpperBound; i++) {
+                        if (validIdioms[resultUpperBound + i] == null) {
+                            break;
+                        }
+                        let idiomButton = document.createElement("div");
+                        result.appendChild(idiomButton);
+                        idiomButton.className = "btn btn-outline-dark mx-auto";
+                        let validIdiom = validIdioms[resultUpperBound + i];
+                        idiomButton.textContent = validIdiom;
+                        idiomButton.addEventListener("click", () => {
+                            var charInput = document.querySelectorAll(".char-input")[0];
+                            charInput.value = validIdiom;
+                            // 触发输入事件
+                            var event = new Event('input', {
+                                bubbles: true,
+                                cancelable: true,
+                            });
+                            charInput.dispatchEvent(event);
                         });
-                        charInput.dispatchEvent(event);
-                    });
+                    }
                 }
             }
 
@@ -191,6 +218,23 @@
 
         // 重置
         document.getElementById("resetButton").addEventListener("click", () => {
+            // 清空当前输入框
+            var pinyinInputs = document.querySelectorAll(".pinyin-input"); 
+            var charInputs = document.querySelectorAll(".char-input");
+            for (let pinyinInput of pinyinInputs) {
+                pinyinInput.innerHTML = "";
+            }
+            for (let charInput of charInputs) {
+                charInput.value = "";
+                charInput.style.color = wrongColor;
+            }
+
+            var resultCollapse = document.getElementById("resultCollapse");
+            var bsCollapse = new bootstrap.Collapse(resultCollapse, {
+            toggle: false
+            });
+            bsCollapse.hide();
+
             ClearMatchInfo();
             var usedInputs = document.querySelectorAll(".used-inputs");
             for (let usedInput of usedInputs) {
@@ -399,6 +443,17 @@
             wrongTones = [];
         }
 
+        function InputIdiom(idiom) {
+            var charInput = document.querySelectorAll(".char-input")[0];
+            charInput.value = idiom;
+            // 触发输入事件
+            var event = new Event('input', {
+                bubbles: true,
+                cancelable: true,
+            });
+            charInput.dispatchEvent(event);
+        }
+
         document.getElementById("submitButton").addEventListener("click", () => {
             // 获取匹配信息
             var pinyinInputs = document.querySelectorAll(".pinyin-input");
@@ -518,14 +573,7 @@
                     idiomButton.className = "btn btn-outline-dark mx-auto";
                     idiomButton.textContent = validIdiom;
                     idiomButton.addEventListener("click", () => {
-                        var charInput = document.querySelectorAll(".char-input")[0];
-                        charInput.value = validIdiom;
-                        // 触发输入事件
-                        var event = new Event('input', {
-                            bubbles: true,
-                            cancelable: true,
-                        });
-                        charInput.dispatchEvent(event);
+                        InputIdiom(validIdiom);
                     });
                     validCount++;
                 }
@@ -550,10 +598,11 @@
                 var pinyinInputs = document.querySelectorAll(".pinyin-input"); 
                 var charInputs = document.querySelectorAll(".char-input");
                 for (let pinyinInput of pinyinInputs) {
-                    pinyinInput.textContent = "";
+                    pinyinInput.innerHTML = "";
                 }
                 for (let charInput of charInputs) {
                     charInput.value = "";
+                    charInput.style.color = wrongColor;
                 }
                 
                 // 撤销匹配信息
@@ -650,8 +699,10 @@
                     if (activeInput.textContent[0] == node.textContent && isFirstNonEmpty) {
                         activeInput.classList.add("first-dyed");
                         if (changedColor == correctColor) {
+                            activeInput.classList.remove("first-mismatch");
                             activeInput.classList.add("first-correct");
                         } else if (changedColor == mismatchColor) {
+                            activeInput.classList.remove("first-correct");
                             activeInput.classList.add("first-mismatch");
                         }
                     }
