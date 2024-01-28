@@ -70,7 +70,6 @@
         </div>
     </div>
 
-
     <div class="d-flex justify-content-center mb-3">
         <button class="btn btn-success border border-3 border-dark change-color-btn mx-2" style="width: 40px; height: 40px;"></button>
         <button class="btn btn-warning border border-3 border-dark change-color-btn mx-2" style="width: 40px; height: 40px;"></button>
@@ -152,6 +151,19 @@
         });
 
 
+        function ToggleCollapse(collapseId, isShow) {
+            var collapse = document.getElementById(collapseId);
+            var bsCollapse = new bootstrap.Collapse(collapse, {
+            toggle: false
+            });
+            if (isShow) {
+                bsCollapse.show();
+            } else {
+                bsCollapse.hide();
+            }
+        }
+
+
         // 快捷填入
         document.getElementById("defaultInputButton").addEventListener("click", () => {
             InputIdiom(document.getElementById("defaultInputButton").textContent);
@@ -184,7 +196,7 @@
             let newUpperBound = event.target.value.replace(/[^0-9]/g, '');
             // console.log(resultUpperBound, newUpperBound);
 
-            // 如果新值为空或0，设置为1；如果大于100，设置为100
+            // 如果新值为空或0，设置为0；如果大于100，设置为100
             if (newUpperBound === "" || newUpperBound === "0") {
                 newUpperBound = 0;
             } else if (parseInt(newUpperBound, 10) > 100) {
@@ -245,11 +257,8 @@
                 charInput.style.color = wrongColor;
             }
 
-            var resultCollapse = document.getElementById("resultCollapse");
-            var bsCollapse = new bootstrap.Collapse(resultCollapse, {
-            toggle: false
-            });
-            bsCollapse.hide();
+            ToggleCollapse("resultCollapse", false);
+            ToggleCollapse("idiomExplanationCollapse", false);
 
             ClearMatchInfo();
             var usedInputs = document.querySelectorAll(".used-inputs");
@@ -259,6 +268,11 @@
             var usedResultCollapses = document.querySelectorAll(".used-result-collapse");
             for (let usedResultCollapse of usedResultCollapses) {
                 usedResultCollapse.parentElement.removeChild(usedResultCollapse);
+            }
+
+            var usedIdiomExplanationCollapses = document.querySelectorAll(".used-idiom-explanation-collapse");
+            for (let usedIdiomExplanationCollapse of usedIdiomExplanationCollapses) {
+                usedIdiomExplanationCollapse.parentElement.removeChild(usedIdiomExplanationCollapse);
             }
         });
 
@@ -600,26 +614,22 @@
                 document.getElementById("promptText").textContent = "请从下方选择一个成语：";
             }
 
-            var resultCollapse = document.getElementById("resultCollapse");
-            var bsCollapse = new bootstrap.Collapse(resultCollapse, {
-            toggle: false
-            });
-            bsCollapse.show();
+            ToggleCollapse("resultCollapse", true);
 
-            // CheckValidation("弄假成真 nong4 jia3 cheng2 zhen1", isTest=true);
+            // CheckValidation("入土为安 ru4 tu3 wei2 an1", isTest=true);
 
 
             if (validIdioms.length == 0) {
-                // 清空输入框
-                var pinyinInputs = document.querySelectorAll(".pinyin-input"); 
-                var charInputs = document.querySelectorAll(".char-input");
-                for (let pinyinInput of pinyinInputs) {
-                    pinyinInput.innerHTML = "";
-                }
-                for (let charInput of charInputs) {
-                    charInput.value = "";
-                    charInput.style.color = wrongColor;
-                }
+                // // 清空输入框
+                // var pinyinInputs = document.querySelectorAll(".pinyin-input"); 
+                // var charInputs = document.querySelectorAll(".char-input");
+                // for (let pinyinInput of pinyinInputs) {
+                //     pinyinInput.innerHTML = "";
+                // }
+                // for (let charInput of charInputs) {
+                //     charInput.value = "";
+                //     charInput.style.color = wrongColor;
+                // }
                 
                 // 撤销匹配信息
                 correctPinyinMap = new Map(correctPinyinMapBackup.entries());
@@ -633,6 +643,7 @@
                 var pinyinInputs = document.querySelectorAll(".pinyin-input");
                 for (let pinyinInput of pinyinInputs) {
                     pinyinInput.contentEditable = false;
+                    pinyinInput.classList.add("bg-body-tertiary");
                     pinyinInput.classList.remove("pinyin-input");
                 }
                 var charInputs = document.querySelectorAll(".char-input");
@@ -649,6 +660,8 @@
                 }
                 document.getElementById("result").id = "usedResult";
                 document.getElementById("promptText").id = "";
+                document.getElementById("idiomExplanationCollapse").classList.add("used-idiom-explanation-collapse");
+                document.getElementById("idiomExplanationCollapse").id = "";
                 CreateInput();
 
                 // 备份匹配信息
@@ -839,18 +852,29 @@
                                 activeInput = inputs[charInputIndex + i].children[0];
                             }
                             
+                            // 如果输入是成语，使用成语注音
                             var pinyin = "";
                             var charIndex = charInputIndex + i - charCount;
                             var isIdiom = false;
+                            var curIdiom = "";
                             for (let idiom of idioms) {
                                 if (idiom.split(" ")[0] == input) {
                                     isIdiom = true;
                                     pinyin = idiom.split(" ")[1 + charIndex];
+                                    curIdiom = idiom.split(" ")[0];
                                     break;
                                 }
                             }
                             if (!isIdiom && pinyinMap.has(input[i]) && pinyinMap.get(input[i]) != undefined) {
                                 pinyin = pinyinMap.get(input[i]);
+                            }
+
+                            // 如果是成语显示成语释义按钮，不是则隐藏
+                            if (isIdiom) {
+                                ToggleCollapse("idiomExplanationCollapse", true);
+                                document.getElementById("idiomExplanationCollapse").children[0].id = curIdiom;
+                            } else {
+                                ToggleCollapse("idiomExplanationCollapse", false);
                             }
                             // 把已知正确的部分染成绿色
                             var shengMu = GetShengMu(pinyin);
@@ -900,10 +924,33 @@
                                 lastInput.focus();
                             }
                         }
+
+                        ToggleCollapse("idiomExplanationCollapse", false);
                     }
                 });
             }
 
+            // 成语释义按钮
+            var idiomExplanationCollapseRow = document.createElement("div");
+            inputContainer.appendChild(idiomExplanationCollapseRow);
+            idiomExplanationCollapseRow.className = "row d-flex justify-content-center";
+            var idiomExplanationCollapseCol = document.createElement("div");
+            idiomExplanationCollapseRow.appendChild(idiomExplanationCollapseCol);
+            idiomExplanationCollapseCol.className = "col-4 col-md-2";
+            var idiomExplanationCollapse = document.createElement("div");
+            idiomExplanationCollapseCol.appendChild(idiomExplanationCollapse);
+            idiomExplanationCollapse.className = "collapse mb-3";
+            idiomExplanationCollapse.id = "idiomExplanationCollapse";
+            let idiomExplanationButton = document.createElement("div");
+            idiomExplanationCollapse.appendChild(idiomExplanationButton);
+            idiomExplanationButton.className = "btn btn-outline-dark d-flex justify-content-center";
+            idiomExplanationButton.textContent = "成语释义";
+            idiomExplanationButton.addEventListener("click", () => {
+                window.open('https://www.hanyuguoxue.com/chengyu/search?words=' + idiomExplanationButton.id, '_blank');
+            });
+
+
+            // 匹配结果
             var resultCollapseRow = document.createElement("div");
             inputContainer.appendChild(resultCollapseRow);
             resultCollapseRow.className = "row d-flex justify-content-center";
