@@ -21,3 +21,11 @@
 .big-spacing {
     letter-spacing: 2px;
 }
+
+.input-with-grid-background {
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), /* 白色半透明覆盖层 */
+        url('./mi_grid_background.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}

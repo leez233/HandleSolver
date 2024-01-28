@@ -157,9 +157,25 @@
             InputIdiom(document.getElementById("defaultInputButton").textContent);
         });
 
+        // 选择靠前的（更常见的）成语概率更高
+        function weightedRandom(items) {
+            // 生成一个权重数组，例如这里是让索引小的元素权重更高
+            let weights = items.map((item, index) => Math.pow(items.length - index, 2));
+            // 计算权重总和
+            let totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+            // 选择一个随机数
+            let randomNum = Math.random() * totalWeight;
+            // 确定随机数落在哪个区间
+            for (let i = 0; i < items.length; i++) {
+                if (randomNum < weights[i]) {
+                    return items[i];
+                }
+                randomNum -= weights[i];
+            }
+        }
+
         document.getElementById("randomIdiomButton").addEventListener("click", () => {
-            var randomIndex = Math.floor(Math.random() * idioms.length);
-            InputIdiom(idioms[randomIndex].split(" ")[0]);
+            InputIdiom(weightedRandom(idioms).split(" ")[0]);
         });
 
 
@@ -590,7 +606,7 @@
             });
             bsCollapse.show();
 
-            // CheckValidation("八仙过海 ba1 xian1 guo4 hai3", isTest=true);
+            // CheckValidation("弄假成真 nong4 jia3 cheng2 zhen1", isTest=true);
 
 
             if (validIdioms.length == 0) {
@@ -648,6 +664,17 @@
 
 
         // 着色
+        function SetFirstDyed(input, color) {
+            input.classList.add("first-dyed");
+            if (color == correctColor) {
+                input.classList.remove("first-mismatch");
+                input.classList.add("first-correct");
+            } else if (color == mismatchColor) {
+                input.classList.remove("first-correct");
+                input.classList.add("first-mismatch");
+            }
+        }
+
         var changeColorButtons = document.querySelectorAll(".change-color-btn");
         var activeInput;
         changeColorButtons.forEach(changeColorButton => {
@@ -667,6 +694,8 @@
                     var pinyinInput = inputs[charInputIndex - charCount].children[0];
                     pinyinInput.innerHTML = "<span style=\"color: " + changedColor + "; \">" + pinyinInput.textContent + "<span>";
                     activeInput.style.color = changedColor;
+
+                    SetFirstDyed(pinyinInput, changedColor);
 
                     return;
                 }
@@ -696,15 +725,8 @@
                         node.style.color = changedColor;
                     }
                     
-                    if (activeInput.textContent[0] == node.textContent && isFirstNonEmpty) {
-                        activeInput.classList.add("first-dyed");
-                        if (changedColor == correctColor) {
-                            activeInput.classList.remove("first-mismatch");
-                            activeInput.classList.add("first-correct");
-                        } else if (changedColor == mismatchColor) {
-                            activeInput.classList.remove("first-correct");
-                            activeInput.classList.add("first-mismatch");
-                        }
+                    if (activeInput.textContent[0] == node.textContent[0] && isFirstNonEmpty) {
+                        SetFirstDyed(activeInput, changedColor);
                     }
                     if (node.textContent != "") {
                         isFirstNonEmpty = false;
@@ -793,7 +815,7 @@
                 charInputDiv.className = "col mb-2";
                 let charInput = document.createElement("input");
                 charInputDiv.appendChild(charInput);
-                charInput.className = "form-control focus-ring border border-2 border-dark text-center fs-1 char-input";
+                charInput.className = "form-control focus-ring border border-2 border-dark text-center fs-1 char-input input-with-grid-background";
                 charInput.style = "--bs-focus-ring-color: rgba(var(--bs-dark-rgb), .25); height: " + charInput.offsetWidth + "px;";
 
                 charInput.addEventListener("select", () => {
