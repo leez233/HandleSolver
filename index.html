@@ -22,7 +22,7 @@
             </div>
             <div class="row text-center">
                 <div class="col-10 col-md-8 mx-auto">
-                    在下方输入汉字后会自动填充拼音，<span class="fw-bold">如有多音字填充不准确可手动修改。（同时注意区分u/v）</span>
+                    在下方输入汉字后会自动填充拼音，<span class="fw-bold">如有多音字填充不准确可手动修改。</span>
                 </div>
             </div>
             <div class="row text-center">
@@ -337,6 +337,7 @@
             for (var i = 0; i < charCount; i++) {
                 var char = idiomText[i];
                 var pinyin = idiom.split(" ")[i + 1];
+                pinyin = pinyin.replace(/^(y|j|q|x)u([a-z]*[0-9]?)$/g, '$1v$2');
                 var tone = pinyin[pinyin.length - 1];
                 tones.push(tone);
                 
@@ -926,8 +927,54 @@
                     var input = event.target.value.trim();
                     let inputs = Array.from(inputDiv.children);
                     var charInputIndex = inputs.indexOf(charInput.parentElement);
+                    var isIdiom = false;
+                    var curIdiom = "";
+                    var isInputFull = true;
+                    var inputtedIdiom = "";
+                    var charInputs = document.querySelectorAll(".char-input");
+                    var curIdiomInfo;
+                    var leftInputCount = 0;   // 左侧已输入的汉字数
 
                     if (!/[a-zA-Z]/.test(input) && input.length > 0) {
+                        for (var i = 0; i < charInputIndex - charCount; i++) {
+                            if (charInputs[i].value != "") {
+                                leftInputCount++;
+                            }
+                        }
+                        input = input.substring(0, charCount - leftInputCount);
+                        if (input.length == 0) return;
+
+                        // 判断是否输入为成语
+                        for (var i = 0; i < leftInputCount; i++) {
+                            if (charInputs[i].value == "") {
+                                isInputFull = false;
+                            } else {
+                                inputtedIdiom += charInputs[i].value;
+                            }
+                        }
+                        inputtedIdiom += input;
+                        for (var i = leftInputCount + input.length; i < charCount; i++) {
+                            if (charInputs[i].value == "") {
+                                isInputFull = false;
+                            } else {
+                                inputtedIdiom += charInputs[i].value;
+                            }
+                        }
+                        if (isInputFull) {
+                            for (let idiom of idioms) {
+                                if (idiom.split(" ")[0] == inputtedIdiom) {
+                                    isIdiom = true;
+                                    curIdiom = idiom.split(" ")[0];
+                                    curIdiomInfo = idiom;
+                                    break;
+                                }
+                            }
+                        }
+                        if (isIdiom && input.length < charCount) {
+                            InputIdiom(curIdiom);
+                            return;
+                        }
+
                         for (var i = 0; i < input.length; i++) {
                             if (inputs.length > charInputIndex + i) {
                                 inputs[charInputIndex + i].children[0].value = input[i];
@@ -938,31 +985,15 @@
                             // 如果输入是成语，使用成语注音
                             var pinyin = "";
                             var charIndex = charInputIndex + i - charCount;
-                            var isIdiom = false;
-                            var curIdiom = "";
-                            var isInputFull = true;
-                            var inputtedIdiom = "";
-                            var charInputs = document.querySelectorAll(".char-input");
-                            for (let charInput of charInputs) {
-                                if (charInput.value == "") {
-                                    isInputFull = false;
-                                } else {
-                                    inputtedIdiom += charInput.value;
-                                }
+                            if (isIdiom) {
+                                pinyin = curIdiomInfo.split(" ")[1 + charIndex];
                             }
-                            if (isInputFull) {
-                                for (let idiom of idioms) {
-                                    if (idiom.split(" ")[0] == inputtedIdiom) {
-                                        isIdiom = true;
-                                        pinyin = idiom.split(" ")[1 + charIndex];
-                                        curIdiom = idiom.split(" ")[0];
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!isIdiom && pinyinMap.has(input[i]) && pinyinMap.get(input[i]) != undefined) {
+                            else if (pinyinMap.has(input[i]) && pinyinMap.get(input[i]) != undefined) {
                                 pinyin = pinyinMap.get(input[i]);
+                            } else {
+                                return;
                             }
+                            pinyin = pinyin.replace(/^(y|j|q|x)u([a-z]*[0-9]?)$/g, '$1v$2');
 
                             // 如果是成语显示成语释义按钮，不是则隐藏
                             if (isIdiom) {
