@@ -98,6 +98,7 @@
         const mismatchColor = "rgb(222, 117, 37)";
         const wrongColor = "black";
         var resultUpperBound = 16;
+        var isIdiom = false;   // 输入是否是成语
         
         let correctPinyinMap = new Map();
         let mismatchPinyinMap = new Map();
@@ -338,6 +339,9 @@
                 var char = idiomText[i];
                 var pinyin = idiom.split(" ")[i + 1];
                 pinyin = pinyin.replace(/^(y|j|q|x)u([a-z]*[0-9]?)$/g, '$1v$2');
+                if (pinyin == "zi") {
+                    pinyin = "zi3";
+                }
                 var tone = pinyin[pinyin.length - 1];
                 tones.push(tone);
                 
@@ -927,13 +931,13 @@
                     var input = event.target.value.trim();
                     let inputs = Array.from(inputDiv.children);
                     var charInputIndex = inputs.indexOf(charInput.parentElement);
-                    var isIdiom = false;
                     var curIdiom = "";
                     var isInputFull = true;
                     var inputtedIdiom = "";
                     var charInputs = document.querySelectorAll(".char-input");
                     var curIdiomInfo;
                     var leftInputCount = 0;   // 左侧已输入的汉字数
+                    isIdiom = false;
 
                     if (!/[a-zA-Z]/.test(input) && input.length > 0) {
                         for (var i = 0; i < charInputIndex - charCount; i++) {
@@ -994,6 +998,9 @@
                                 return;
                             }
                             pinyin = pinyin.replace(/^(y|j|q|x)u([a-z]*[0-9]?)$/g, '$1v$2');
+                            if (pinyin == "zi") {
+                                pinyin = "zi3";
+                            }
 
                             // 如果是成语显示成语释义按钮，不是则隐藏
                             if (isIdiom) {
@@ -1068,10 +1075,17 @@
             var idiomExplanationCollapseCol = document.createElement("div");
             idiomExplanationCollapseRow.appendChild(idiomExplanationCollapseCol);
             idiomExplanationCollapseCol.className = "col-10 col-md-6 d-flex justify-content-center";
-            var idiomExplanationCollapse = document.createElement("div");
+            let idiomExplanationCollapse = document.createElement("div");
             idiomExplanationCollapseCol.appendChild(idiomExplanationCollapse);
             idiomExplanationCollapse.className = "collapse mb-3";
             idiomExplanationCollapse.id = "idiomExplanationCollapse";
+            // 在完成展开时检查输入还是否构成成语，若不是则折叠
+            idiomExplanationCollapse.addEventListener("shown.bs.collapse", () => {
+                console.log(isIdiom);
+                if (!isIdiom) {
+                    ToggleCollapse(idiomExplanationCollapse.id, false);
+                }
+            })
             let idiomExplanationButton = document.createElement("button");
             idiomExplanationCollapse.appendChild(idiomExplanationButton);
             idiomExplanationButton.className = "btn btn-outline-dark mx-2";
